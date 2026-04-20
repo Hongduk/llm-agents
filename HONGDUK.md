@@ -122,9 +122,16 @@ def record_unknown_question(question):
 
 ---
 
-#### 5_extra — Agent Loop from Scratch
-**Pattern: Pure Agentic Loop**
-- [ ] Coming soon
+#### Lab 5 Extra — Agent Loop from Scratch ✅
+**Pattern: Plan → Execute → Answer**
+
+- Built pure agentic loop with todo planning tools
+- create_todos() → agent plans all steps upfront
+- mark_complete() → agent executes each step
+- Gradio UI shows plan + answer
+- Terminal shows real-time tool calls
+- Key learning: array parameter type, globals() pattern,
+  autonomous problem solving without human input
 
 ---
 
@@ -189,8 +196,15 @@ while not done:
         results = handle_tool_calls(...)
         messages.extend(results)      # feed results back to LLM
     else:
-        done = True                   # LLM finished
+        done = True                   # LLM finished     
 ```
+
+### Agent Loop (Pure Form)
+- create_todos ONCE → plan all steps
+- mark_complete × N → execute each step
+- while loop exits when finish_reason = "stop"
+- array parameter type for multiple values at once
+
 
 ### RAG Pipeline (Advanced)
 ```python
@@ -260,18 +274,6 @@ Tools & APIs:
 Language: Python 3.12
 Environment: Jupyter notebooks + VS Code + uv
 ```
-
----
-
-## Patents
-
-1. **Battery Exchange Device and Battery Exchange System**
-   (배터리 교환 장치 및 배터리 교환 시스템)
-
-2. **Server and Its Operating Method, Battery Exchange System**
-   (서버 및 그것의 동작 방법, 배터리 교환 시스템)
-
-Both patents cover hardware/software architecture of battery swapping infrastructure, developed during founding of KooRoo under LG Energy Solution.
 
 ---
 
