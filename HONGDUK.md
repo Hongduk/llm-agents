@@ -135,7 +135,149 @@ def record_unknown_question(question):
 
 ---
 
-### Week 2 — Advanced Agents
+### Week 2 — OpenAI Agents SDK
+
+#### Day 1 — Agents SDK Basics ✅
+**Key difference from Week 1:**
+```python
+# Week 1 — manual (20+ lines)
+system_prompt = "..."
+messages = [{"role": "system", "content": system_prompt}]
+response = openai.chat.completions.create(...)
+while not done: ...
+
+# Week 2 — SDK (3 lines)
+agent = Agent(name="Jokester", instructions="...", model="gpt-4o-mini")
+result = await Runner.run(agent, "Tell a joke")
+print(result.final_output)
+```
+- Agent, Runner, trace
+- trace visible at platform.openai.com/traces
+- await + async for non-blocking LLM calls
+
+#### Day 2 — Multi-Agent Sales System ✅
+**Patterns: Parallelization + LLM-as-Judge + Orchestrator**
+```python
+# @function_tool replaces all JSON boilerplate
+@function_tool
+def send_email(body: str):
+    """Send email to prospects"""
+    print(body)
+
+# agent.as_tool() converts agent to tool
+tool1 = sales_agent1.as_tool(tool_name="sales_agent1", tool_description="Write cold email")
+
+# asyncio.gather() runs agents in parallel
+results = await asyncio.gather(
+    Runner.run(sales_agent1, message),
+    Runner.run(sales_agent2, message),
+    Runner.run(sales_agent3, message),
+)
+```
+- 3 sales agents (professional/humorous/concise) in parallel
+- sales_picker selects best email (LLM-as-Judge)
+- emailer_agent formats + sends (handoff)
+- Key learning: @function_tool, as_tool(), handoffs vs tools
+
+#### Day 3 — Different Models + Guardrails ✅
+**Patterns: Multi-model + Structured Output + Safety**
+```python
+# Use any LLM with Agents SDK
+gemini_client = AsyncOpenAI(base_url=GEMINI_BASE_URL, api_key=google_api_key)
+gemini_model = OpenAIChatCompletionsModel(model="gemini-2.5-flash", openai_client=gemini_client)
+sales_agent1 = Agent(name="Gemini Agent", model=gemini_model)
+
+# Structured output for guardrail
+class NameCheckOutput(BaseModel):
+    is_name_in_message: bool
+    name: str
+
+# Input guardrail blocks personal names
+@input_guardrail
+async def guardrail_against_name(ctx, agent, message):
+    result = await Runner.run(guardrail_agent, message, context=ctx.context)
+    return GuardrailFunctionOutput(
+        output_info=result.final_output,
+        tripwire_triggered=result.final_output.is_name_in_message
+    )
+```
+- Agents using: Gemini, Groq (gpt-oss-120b), Upstage (Solar), OpenRouter (Claude)
+- AsyncOpenAI + OpenAIChatCompletionsModel for non-OpenAI models
+- @input_guardrail blocks messages with personal names
+- tripwire_triggered=True → agent never runs
+
+#### Day 4 — Deep Research Agent ✅
+**Pattern: Orchestrated Pipeline + Reflection**
+```
+User query
+    ↓
+planner_agent → WebSearchPlan (5 searches)
+    ↓
+5 parallel web searches (asyncio.create_task)
+    ↓
+write_report_with_reflection:
+    writer_agent → initial draft
+    critic_agent → evaluates (is_approved, critique_points, rating/10)
+    if rejected → refine → repeat (max 3 iterations)
+    ↓
+email_agent → formats HTML → sends via SendGrid → mhda08@naver.com 📧
+```
+
+**Key new concepts:**
+```python
+# WebSearchTool — built-in internet search
+search_agent = Agent(
+    tools=[WebSearchTool(search_context_size="low")],
+    model_settings=ModelSettings(tool_choice="required")  # force tool use
+)
+
+# Field() — better structured output
+class WebSearchItem(BaseModel):
+    reason: str = Field(description="Why this search matters")
+    query: str = Field(description="The search term")
+
+# create_task — dynamic parallel execution
+tasks = [asyncio.create_task(search(item)) for item in search_plan.searches]
+results = await asyncio.gather(*tasks)
+
+# Custom Reflection for report quality
+class Criticism(BaseModel):
+    is_approved: bool
+    critique_points: list[str]
+    rating: int  # quality score 1-10
+```
+
+---
+
+## Key Concepts Mastered
+
+### Week 1 vs Week 2 Comparison
+```
+                    Week 1              Week 2
+Tool definition:    JSON dict           @function_tool
+Agent creation:     manual prompt       Agent(name, instructions, model)
+Agent execution:    while not done      Runner.run()
+Tool routing:       globals().get()     handled by SDK
+Parallel exec:      manual              asyncio.gather()
+Agent→Agent:        manual messages     as_tool() + handoffs
+Tracing:            print statements    trace() + OpenAI dashboard
+Multi-model:        OpenAI() + base_url AsyncOpenAI + OpenAIChatCompletionsModel
+Safety:             manual checks       @input_guardrail + tripwire
+Web search:         manual tool         WebSearchTool (built-in)
+```
+
+### Agentic Patterns Covered
+```
+Pattern 1: LLM-as-Judge        → one LLM evaluates another
+Pattern 2: Reflection          → generate → evaluate → retry
+Pattern 3: Tool Calling        → agent triggers real-world actions
+Pattern 4: Plan → Execute      → agent plans before acting
+Pattern 5: Parallelization     → multiple agents simultaneously
+Pattern 6: Orchestrator        → manager coordinates subagents
+Pattern 7: Handoffs            → agent delegates permanently
+Pattern 8: Guardrails          → safety checks before agent runs
+Pattern 9: Pipeline            → sequential steps with parallel middle
+```
 - [ ] Coming soon
 
 ### Week 3 — Multi-Agent Systems
